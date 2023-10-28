@@ -4,7 +4,6 @@
 if [ $# -ne 1 ]; then
   echo "Usage: $0 <directory>"
   echo "This command requires one argument, which is the directory containing the .pdb file and the .mdp files."
-  echo "Your presence is required for the process, since GROMACS asks the user parameters to set for your simulation"
   exit 1
 fi
 
@@ -14,7 +13,7 @@ input_directory="$1"
 # Search for .pdb or .PDB files in the directory
 pdb_file=$(find "$input_directory" -type f \( -iname "*.pdb" -o -iname "*.PDB" \) -print -quit)
 #search for minim.mdp
-md_file=$(find "$input_directory" -type f -name "md.mdp" -print -quit)
+minim_file=$(find "$input_directory" -type f -name "minim.mdp" -print -quit)
 # Search for md.mdp
 md_file=$(find "$input_directory" -type f -name "md.mdp" -print -quit)
 # Search for npt.mdp
@@ -23,14 +22,14 @@ npt_file=$(find "$input_directory" -type f -name "npt.mdp" -print -quit)
 nvt_file=$(find "$input_directory" -type f -name "nvt.mdp" -print -quit)
 
 
-# Check if the files in pdb_file, md_file, md_file, npt_file and nvt_file exist
+# Check if the files in pdb_file, minim_file, md_file, npt_file and nvt_file exist
 
 if [ ! -f "$pdb_file" ]; then
   echo "The .pdb file does not exist. Exiting."
   exit 2
 fi
 
-if [ ! -f "$md_file" ]; then
+if [ ! -f "$minim_file" ]; then
   echo "The minim.mdp file does not exist. Exiting."
   exit 2
 fi
@@ -120,7 +119,7 @@ fi
 
 cd "$input_directory/$subfolder2"
 
-gmx grompp -f "../../$md_file" -c "../$subfolder1/dip_solv.gro" -p "../$subfolder0/topol.top" -o "ions.tpr"
+gmx grompp -f "../../$minim_file" -c "../$subfolder1/dip_solv.gro" -p "../$subfolder0/topol.top" -o "ions.tpr"
 
 gmx genion -s "./ions.tpr" -o "dip_solv_ions.gro" -p "../$subfolder0/topol.top" -pname NA -nname CL -conc 0.1 -neutral
 
@@ -146,9 +145,9 @@ fi
 
 cd "$input_directory/$subfolder3"
 
-gmx grompp -f "../../$md_file" -c "../$subfolder2/dip_solv_ions.gro" -p "../$subfolder0/topol.top" -o "em.tpr"
+gmx grompp -f "../../$minim_file" -c "../$subfolder2/dip_solv_ions.gro" -p "../$subfolder0/topol.top" -o "em.tpr"
 gmx mdrun -v -deffnm em
-# gmx energy -f em.edr -o potential.xvg
+gmx energy -f em.edr -o potential.xvg
 
 echo "----------------------------------------------------"
 echo "end of step 3"
@@ -174,14 +173,14 @@ cd "$input_directory/$subfolder4"
 gmx grompp -f "../../$nvt_file" -c "../$subfolder3/em.gro" -r "../$subfolder3/em.gro" -p "../$subfolder0/topol.top" -o "nvt.tpr"
 gmx mdrun -deffnm nvt
 
-# gmx energy -f "./nvt.edr" -o "temperature.xvg"
+gmx energy -f "./nvt.edr" -o "temperature.xvg"
 
 echo "=============================================================== $npt_file"
 
 gmx grompp -f "../../$npt_file" -c "./nvt.gro" -r "./nvt.gro" -t "./nvt.cpt" -p "../$subfolder0/topol.top" -o "npt.tpr"
 gmx mdrun -deffnm npt
 
-# gmx energy -f "./npt.edr" -o "pressure.xvg"
+gmx energy -f "./npt.edr" -o "pressure.xvg"
 
 
 echo "------------------------------------------------------"
